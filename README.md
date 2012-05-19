@@ -21,7 +21,6 @@ sample_program.rb && ruby sample_program.rb
 checking for main() in -lbluetooth... yes
 creating Makefile
 linking shared-object ruby_bluetooth.so
-</pre>
 
 
     require_relative "ruby_bluetooth"
@@ -35,7 +34,6 @@ linking shared-object ruby_bluetooth.so
     p a
 
 
-<pre>
 F0:1C:13:55:0B:E7
 LG-C800
 #<Bluetooth::Device:0x00000001d123c8>
