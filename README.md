@@ -24,15 +24,15 @@ linking shared-object ruby_bluetooth.so
 </pre>
 
 
-  require_relative "ruby_bluetooth"
+    require_relative "ruby_bluetooth"
 
-  a = Bluetooth::Devices.scan
-  a.each { |device|
-    puts device.addr
-    puts device.name
-    p device
-  }
-  p a
+    a = Bluetooth::Devices.scan
+    a.each { |device|
+      puts device.addr
+      puts device.name
+      p device
+    }
+    p a
 
 
 <pre>
