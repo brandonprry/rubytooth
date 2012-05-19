@@ -1,4 +1,6 @@
 // Include the Ruby headers and goodies
+//
+
 #include <ruby.h>
 #include <ruby/io.h>
 #include <ruby/backward/rubysig.h>
@@ -105,9 +107,12 @@ static VALUE bt_service_register(VALUE self, VALUE socket) {
         }
 
         //        uint32_t service_uuid_int[] = { 0, 0, 0, 0xABCD };
-        const char *service_name = STR2CSTR(rb_iv_get(self, "@name"));
-        const char *service_dsc = STR2CSTR(rb_iv_get(self, "@description"));
-        const char *service_prov = STR2CSTR(rb_iv_get(self, "@provider"));
+        VALUE name = rb_iv_get(self, "@name");
+        VALUE desc = rb_iv_get(self, "@description");
+        VALUE prov = rb_iv_get(self, "@provider");
+        const char *service_name = RSTRING_PTR(StringValue(name));
+        const char *service_dsc = RSTRING_PTR(StringValue(desc));
+        const char *service_prov = RSTRING_PTR(StringValue(prov));
 
         uuid_t root_uuid, l2cap_uuid, rfcomm_uuid, svc_uuid;
         sdp_list_t *l2cap_list = 0,
@@ -121,7 +126,8 @@ static VALUE bt_service_register(VALUE self, VALUE socket) {
 
         // set the general service ID
         //        sdp_uuid128_create( &svc_uuid, &service_uuid_int );
-        char *service_id = STR2CSTR(rb_iv_get(self, "@uuid"));
+        VALUE uuid = rb_iv_get(self, "@uuid");
+        char *service_id = RSTRING_PTR(StringValue(uuid));
         if(str2uuid(service_id, &svc_uuid) != 0) {
             rb_raise (rb_eIOError, "a valid uuid must be passed");
         }
@@ -224,15 +230,21 @@ static VALUE bt_service_new(VALUE self, VALUE uuid, VALUE name, VALUE descriptio
 static VALUE
 bt_l2cap_socket_connect(VALUE self, VALUE host, VALUE port)
 {
+  fprintf(stderr, "connecting!\n");
     rb_io_t *fptr;
     int fd;
 
+    fprintf(stderr,"Getting open file\n");
     GetOpenFile(self, fptr);
-    fd = fileno(fptr->stdio_file);
 
+    fprintf(stderr, "got open file\n");
+    fd = fptr->fd;
+
+    fprintf(stderr, "structing\n");
     struct sockaddr_l2 addr = { 0 };
     char *dest = STR2CSTR(host);
 
+    fprintf(stderr, "setting addr info\n");
     // set the connection parameters (who to connect to)
     addr.l2_family = AF_BLUETOOTH;
     addr.l2_psm = (uint8_t) FIX2UINT(port);
@@ -240,6 +252,7 @@ bt_l2cap_socket_connect(VALUE self, VALUE host, VALUE port)
 
     // connect to server
     if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+      fprintf(stderr, "connected!\n");
         rb_sys_fail("connect(2)");
     }
 
@@ -304,18 +317,28 @@ static VALUE
 bt_l2cap_socket_bind(VALUE self, VALUE port)
 {
     rb_io_t *fptr;
-    int fd;
+    FILE *fd;
 
-    GetOpenFile(self, fptr);
-    fd = fileno(fptr->stdio_file);
+    int s = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
+    //fptr = self->fptr;
+    //fd = fptr->fd;
+
+    fprintf(stderr, "%i\n", s);
 
     struct sockaddr_l2 loc_addr = { 0 };
     loc_addr.l2_family = AF_BLUETOOTH;
     loc_addr.l2_bdaddr = *BDADDR_ANY;
-    loc_addr.l2_psm = (uint8_t) FIX2UINT(port);
+    loc_addr.l2_psm = htobs( /*FIX2UINT(port)*/0x1001);
 
-    if (bind(fd, (struct sockaddr *)&loc_addr, sizeof(loc_addr)) >= 0)
-        rb_iv_set(self, "@port", port);
+    //int wut = bind(s, (struct sockaddr *)&loc_addr, sizeof(loc_addr));
+    
+    //fprintf(stderr, "%i\n", wut);
+
+    if (bind(s, (struct sockaddr *)&loc_addr, sizeof(loc_addr)) >= 0)
+    {
+      fprintf(stderr, "Doing something with a port: %i\n", 0x1001);
+        rb_iv_set(self, "@port", 0x1001);
+    }
     return INT2FIX(0);
 }
 
