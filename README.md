@@ -36,7 +36,7 @@ linking shared-object ruby_bluetooth.so
 
 F0:1C:13:55:0B:E7
 LG-C800
-#<Bluetooth::Device:0x00000001d123c8>
-[#<Bluetooth::Device:0x00000001d123c8>]
+#&lt;Bluetooth::Device:0x00000001d123c8&gt;
+[#&lt;Bluetooth::Device:0x00000001d123c8&gt;]
 bperry@bperry-rapid7:~/work/rubytooth$ 
 </pre>
