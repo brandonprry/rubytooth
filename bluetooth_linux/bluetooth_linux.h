@@ -12,11 +12,6 @@
 void Init_ruby_bluetooth();
 
 
-/* obsolete API - use StringValue() */
-char *rb_str2cstr _((VALUE,long*));
-/* obsolete API - use StringValuePtr() */
-#define STR2CSTR(x) rb_str2cstr((VALUE)(x),0)
-
 struct bluetooth_device_struct
 {
     VALUE addr;
