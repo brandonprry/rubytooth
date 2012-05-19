@@ -1,8 +1,8 @@
 // Include the Ruby headers and goodies
 #include <ruby.h>
-#include <rubyio.h>
-#include <rubysig.h>
-#include <util.h>
+#include <ruby/io.h>
+#include <ruby/backward/rubysig.h>
+#include <ruby/util.h>
 //#include <unistd.h>
 //#include <winsock2.h>
 #include <Ws2bth.h>

@@ -1,8 +1,8 @@
 // Include the Ruby headers and goodies
 #import <ruby.h>
-#import <rubyio.h>
-#import <rubysig.h>
-#import <util.h>
+#import <ruby/io.h>
+#import <ruby/backward/rubysig.h>
+#import <ruby/util.h>
 #import <unistd.h>
 
 #import <Foundation/NSDictionary.h>
