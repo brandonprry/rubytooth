@@ -28,6 +28,12 @@ struct bluetooth_service_struct
 	sdp_session_t *session;
 };
 
+static VALUE bt_service_gen_uuid16(VALUE self, VALUE type);
+
+static VALUE bt_service_gen_uuid32(VALUE self, VALUE type);
+
+static VALUE bt_service_gen_uuid128(VALUE self, VALUE type);
+
 static VALUE bt_device_new(VALUE self, VALUE name, VALUE addr);
 
 static VALUE bt_devices_scan(VALUE self);

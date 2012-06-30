@@ -32,8 +32,8 @@ void Init_ruby_bluetooth()
     rb_undef_method(bt_devices_class, "initialize");
 
     bt_socket_class = rb_define_class_under(bt_module, "BluetoothSocket", rb_cIO);
-    rb_define_method(bt_socket_class, "inspect", bt_socket_inspect, 0);
-    rb_define_method(bt_socket_class, "for_fd", bt_socket_s_for_fd, 1);
+    //rb_define_method(bt_socket_class, "inspect", bt_socket_inspect, 0);
+    //rb_define_method(bt_socket_class, "for_fd", bt_socket_s_for_fd, 1);
     rb_define_method(bt_socket_class, "listen", bt_socket_listen, 1);
     rb_define_method(bt_socket_class, "accept", bt_socket_accept, 0);
     rb_undef_method(bt_socket_class, "initialize");
@@ -51,6 +51,9 @@ void Init_ruby_bluetooth()
     bt_services_class = rb_define_class_under(bt_module, "Services", rb_cObject);
     //rb_define_singleton_method(bt_services_class, "scan", bt_services_scan, 3);
     rb_undef_method(bt_services_class, "initialize");
+    //rb_define_method(bt_service_class, "gen_uuid16'", bt_service_gen_uuid16, 1);
+    //rb_define_method(bt_service_class, "gen_uuid32", bt_service_gen_uuid32, 1);
+    //rb_define_method(bt_service_class, "gen_uuid128", bt_service_gen_uuid128, 1);
 
     bt_service_class = rb_define_class_under(bt_module, "Service", rb_cObject);
     rb_define_singleton_method(bt_service_class, "new", bt_service_new, 4);
@@ -62,7 +65,6 @@ void Init_ruby_bluetooth()
     rb_define_attr(bt_service_class, "provider", Qtrue, Qfalse);
 
     rb_define_method(bt_service_class, "registered?", bt_service_registered, 0);
-
 }
 
 static VALUE bt_socket_accept(VALUE self) {
@@ -70,16 +72,41 @@ static VALUE bt_socket_accept(VALUE self) {
     VALUE sock2;
     char buf[1024];
     socklen_t len = sizeof(buf);
-
-    //	struct sockaddr_rc rcaddr;
-    //	addr_len = sizeof(rcaddr);
-
     GetOpenFile(self, fptr);
-    //sock2 = s_accept(bt_socket_class, fileno(fptr->f), (struct sockaddr *)&rcaddr, &addr_len);
     sock2 = s_accept(bt_socket_class, fileno(fptr->stdio_file), (struct sockaddr *)buf, &len);
     return rb_assoc_new(sock2, rb_str_new(buf, len));
 }
 
+static VALUE bt_service_gen_uuid16(VALUE self, VALUE type)
+{
+  VALUE uuid;
+
+  fprintf(stderr, "%i", PUBLIC_BROWSE_GROUP);
+  fprintf(stderr, "%i", L2CAP_UUID);
+  fprintf(stderr, "%i", RFCOMM_UUID);
+
+  sdp_uuid16_create(&uuid, INT2FIX(type));
+
+  return uuid;
+}
+
+static VALUE bt_service_gen_uuid32(VALUE self, VALUE type)
+{
+  VALUE uuid;
+
+  sdp_uuid32_create(&uuid, INT2FIX(type));
+
+  return uuid;
+}
+
+static VALUE bt_service_gen_uuid128(VALUE self, VALUE type)
+{
+  VALUE uuid;
+
+  sdp_uuid128_create(&uuid, INT2FIX(type));
+
+  return uuid;
+}
 
 static VALUE
 bt_socket_listen(sock, log)
@@ -106,7 +133,7 @@ static VALUE bt_service_register(VALUE self, VALUE socket) {
             rb_raise (rb_eIOError, "a bound socket must be passed");
         }
 
-        //        uint32_t service_uuid_int[] = { 0, 0, 0, 0xABCD };
+        //uint32_t service_uuid_int[] = { 0, 0, 0, 0xABCD };
         VALUE name = rb_iv_get(self, "@name");
         VALUE desc = rb_iv_get(self, "@description");
         VALUE prov = rb_iv_get(self, "@provider");
@@ -116,16 +143,17 @@ static VALUE bt_service_register(VALUE self, VALUE socket) {
 
         uuid_t root_uuid, l2cap_uuid, rfcomm_uuid, svc_uuid;
         sdp_list_t *l2cap_list = 0,
-                                 *rfcomm_list = 0,
-                                                *root_list = 0,
-                                                             *proto_list = 0,
-                                                                           *access_proto_list = 0;
+                   *rfcomm_list = 0,
+                   *root_list = 0,
+                   *proto_list = 0,
+                   *access_proto_list = 0;
+
         sdp_data_t *channel = 0, *psm = 0;
 
         sdp_record_t *record = sdp_record_alloc();
 
         // set the general service ID
-        //        sdp_uuid128_create( &svc_uuid, &service_uuid_int );
+        //sdp_uuid128_create( &svc_uuid, &service_uuid_int );
         VALUE uuid = rb_iv_get(self, "@uuid");
         char *service_id = RSTRING_PTR(StringValue(uuid));
         if(str2uuid(service_id, &svc_uuid) != 0) {
@@ -230,29 +258,24 @@ static VALUE bt_service_new(VALUE self, VALUE uuid, VALUE name, VALUE descriptio
 static VALUE
 bt_l2cap_socket_connect(VALUE self, VALUE host, VALUE port)
 {
-  fprintf(stderr, "connecting!\n");
     rb_io_t *fptr;
     int fd;
 
-    fprintf(stderr,"Getting open file\n");
+    Check_Type(self, T_FILE);
+
     GetOpenFile(self, fptr);
+    fd = fileno(fptr->fd);
 
-    fprintf(stderr, "got open file\n");
-    fd = fptr->fd;
-
-    fprintf(stderr, "structing\n");
     struct sockaddr_l2 addr = { 0 };
-    char *dest = STR2CSTR(host);
+    char *dest = RSTRING_PTR(StringValue(host));
 
-    fprintf(stderr, "setting addr info\n");
     // set the connection parameters (who to connect to)
     addr.l2_family = AF_BLUETOOTH;
-    addr.l2_psm = (uint8_t) FIX2UINT(port);
+    addr.l2_psm = htobs((uint8_t)FIX2UINT(port));
     str2ba( dest, &addr.l2_bdaddr );
 
     // connect to server
     if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-      fprintf(stderr, "connected!\n");
         rb_sys_fail("connect(2)");
     }
 
@@ -262,24 +285,26 @@ bt_l2cap_socket_connect(VALUE self, VALUE host, VALUE port)
 static VALUE
 bt_rfcomm_socket_connect(VALUE self, VALUE host, VALUE port)
 {
+
+    //int s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+    //rb_funcall(bt_socket_class, rb_intern("for_fd"), 1, INT2NUM(s));
+
     rb_io_t *fptr;
     int fd;
 
     GetOpenFile(self, fptr);
-    fd = fileno(fptr->stdio_file);
+    fd = fileno(fptr->fd);
 
     struct sockaddr_rc addr = { 0 };
-    char *dest = STR2CSTR(host);
+    char *dest = RSTRING_PTR(StringValue(host));
 
     // set the connection parameters (who to connect to)
     addr.rc_family = AF_BLUETOOTH;
     addr.rc_channel = (uint8_t) FIX2UINT(port);
     str2ba( dest, &addr.rc_bdaddr );
 
-    // connect to server
-    if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        rb_sys_fail("connect(2)");
-    }
+    if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+      rb_sys_fail("connect(2)");
 
     return INT2FIX(0);
 }
@@ -300,6 +325,7 @@ bt_rfcomm_socket_bind(VALUE self, VALUE port)
     rb_io_t *fptr;
     int fd;
 
+    Check_Type(self, T_FILE);
     GetOpenFile(self, fptr);
     fd = fileno(fptr->stdio_file);
 
@@ -317,27 +343,32 @@ static VALUE
 bt_l2cap_socket_bind(VALUE self, VALUE port)
 {
     rb_io_t *fptr;
-    FILE *fd;
+    int fd;
 
-    int s = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
+    GetOpenFile(self, fptr);
+    fd = fileno(fptr->stdio_file);
+    //int s = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
     //fptr = self->fptr;
     //fd = fptr->fd;
 
-    fprintf(stderr, "%i\n", s);
+    printf("descriptor: %i", fd);
+    printf("stdio file: %i", fptr->stdio_file);
+
+    //fprintf(stderr, "%i\n", s);
 
     struct sockaddr_l2 loc_addr = { 0 };
     loc_addr.l2_family = AF_BLUETOOTH;
     loc_addr.l2_bdaddr = *BDADDR_ANY;
-    loc_addr.l2_psm = htobs( /*FIX2UINT(port)*/0x1001);
+    loc_addr.l2_psm = htobs(FIX2UINT(port));
 
     //int wut = bind(s, (struct sockaddr *)&loc_addr, sizeof(loc_addr));
-    
+
     //fprintf(stderr, "%i\n", wut);
 
-    if (bind(s, (struct sockaddr *)&loc_addr, sizeof(loc_addr)) >= 0)
+    if (bind(fd, (struct sockaddr *)&loc_addr, sizeof(loc_addr)) >= 0)
     {
-      fprintf(stderr, "Doing something with a port: %i\n", 0x1001);
-        rb_iv_set(self, "@port", 0x1001);
+      fprintf(stderr, "Doing something with a port: %i\n", FIX2UINT(port));
+        rb_iv_set(self, "@port", FIX2UINT(port));
     }
     return INT2FIX(0);
 }
@@ -365,11 +396,12 @@ bt_ruby_socket(int domain, int type, int proto)
 static VALUE
 bt_init_sock(VALUE sock, int fd)
 {
-    rb_io_t *fp = NULL;
+    rb_io_t *fp;
 
     MakeOpenFile(sock, fp);
 
-    fp->stdio_file = rb_fdopen(fd, "rw");
+    fp->fd = rb_fdopen(fd, "rw");
+    //fp->stdio_file = rb_fdopen(fd, "w");
     fp->mode = FMODE_READWRITE;
 
     rb_io_synchronized(fp);
@@ -392,6 +424,7 @@ static VALUE bt_rfcomm_socket_init(int argc, VALUE *argv, VALUE sock)
 static VALUE bt_l2cap_socket_init(int argc, VALUE *argv, VALUE sock)
 {
     int fd = bt_ruby_socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
+    fprintf(stderr, "FD: %i", fd);
     if (fd < 0) {
         rb_sys_fail("socket(2) - bt");
     }
@@ -575,7 +608,3 @@ str2uuid(char *uuid_str, uuid_t *uuid)
 
     return 0;
 }
-
-
-
-
