@@ -59,6 +59,7 @@ static VALUE bt_devices_scan(VALUE self)
 - (void)    deviceInquiryDeviceFound:(IOBluetoothDeviceInquiry*)sender  device:(IOBluetoothDevice*)device
 {
     const BluetoothDeviceAddress* addressPtr = [device getAddress];
+    NSString* deviceAddressString;
     deviceAddressString = [NSString stringWithFormat:@"[%02x:%02x:%02x:%02x:%02x:%02x]",
 	  addressPtr->data[0],
       addressPtr->data[1],
@@ -67,7 +68,7 @@ static VALUE bt_devices_scan(VALUE self)
       addressPtr->data[4],
       addressPtr->data[5]];
 
-	NSString* deviceNameString = [inDevice getName];
+	NSString* deviceNameString = [device getName];
     if( !deviceNameString ) {
       deviceNameString = @"[unknown]";
     }
