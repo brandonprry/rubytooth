@@ -12,6 +12,8 @@ headers in macosx and win32 but have not even tried to compile them
 since I have neither a mac nor a win32 dev env.
 </pre>
 
+Run 'ruby extconf.rb' then 'make'
+
 Example:
 ===========
 
